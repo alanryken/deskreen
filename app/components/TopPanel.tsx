@@ -1,7 +1,6 @@
 /* eslint-disable react/destructuring-assignment */
 /* eslint-disable @typescript-eslint/no-explicit-any */
 /* eslint-disable react-hooks/rules-of-hooks */
-import { shell } from 'electron';
 import React, { useCallback, useContext } from 'react';
 import { Button, Text, Icon, Position, Tooltip } from '@blueprintjs/core';
 import { createStyles, makeStyles } from '@material-ui/core/styles';
@@ -78,51 +77,8 @@ export default function TopPanel(props: any) {
     setIsConnectedDevicesDrawerOpen(!isConnectedDevicesDrawerOpen);
   }, [isConnectedDevicesDrawerOpen]);
 
-  const donateTooltipContent = t(
-    'If you like Deskreen consider contributing financially Deskreen is open-source Your donations keep us motivated to make Deskreen even better'
-  );
-  const deskreenButtonTooltip = t('Click to visit our website');
 
-  const renderDonateButton = useCallback(() => {
-    return (
-      <Tooltip content={donateTooltipContent} position={Position.BOTTOM}>
-        <Button
-          style={{
-            marginRight: '10px',
-            borderRadius: '100px',
-          }}
-          onClick={() => {
-            shell.openExternal(
-              'https://twitter.com/Ukraine/status/1497294840110977024'
-            );
-          }}
-        >
-          <Row start="xs">
-            <Col xs>
-              <img
-                src={RedHeartTwemojiPNG}
-                width={16}
-                height={16}
-                style={{ transform: 'translateY(2px)' }}
-                alt="heart"
-              />
-            </Col>
-            <Col xs>
-              <div
-                style={{
-                  transform: 'translateY(2px) translateX(-5px)',
-                  width: 'max-content',
-                }}
-              >
-                <Text>{t('Donate')}</Text>
-              </div>
-            </Col>
-          </Row>
-        </Button>
-      </Tooltip>
-    );
-  }, [donateTooltipContent, t]);
-
+  // 连接设备按钮
   const renderConnectedDevicesListButton = useCallback(() => {
     return (
       <div className={getClassesCallback().topPanelControlButtonMargin}>
@@ -143,30 +99,7 @@ export default function TopPanel(props: any) {
       </div>
     );
   }, [getClassesCallback, handleToggleConnectedDevicesListDrawer, t]);
-
-  const renderHelpButton = useCallback(() => {
-    return (
-      <div className={getClassesCallback().topPanelControlButtonMargin}>
-        <Tooltip content={t('Tutorial')} position={Position.BOTTOM}>
-          <Button
-            id="top-panel-help-button"
-            intent="none"
-            className={getClassesCallback().topPanelControlButton}
-            onClick={() => {
-              shell.openExternal('https://www.deskreen.com/?#howtos');
-            }}
-          >
-            <Icon
-              className={getClassesCallback().topPanelIconOfControlButton}
-              icon="learning"
-              iconSize={22}
-            />
-          </Button>
-        </Tooltip>
-      </div>
-    );
-  }, [getClassesCallback, t]);
-
+  // 设置按钮
   const renderSettingsButton = useCallback(() => {
     return (
       <div className={getClassesCallback().topPanelControlButtonMargin}>
@@ -187,36 +120,7 @@ export default function TopPanel(props: any) {
     );
   }, [getClassesCallback, handleSettingsOpen, t]);
 
-  const renderLogoWithAppName = useCallback(() => {
-    return (
-      <div
-        id="logo-with-popover-visit-website"
-        className={getClassesCallback().logoWithAppName}
-      >
-        <Tooltip content={deskreenButtonTooltip} position={Position.BOTTOM}>
-          <Button
-            minimal
-            onClick={() => {
-              shell.openExternal('https://www.deskreen.com');
-            }}
-            style={{
-              borderRadius: '100px',
-            }}
-          >
-            <h4
-              id="deskreen-top-app-name-header"
-              className={getClassesCallback().appNameHeader}
-              style={{
-                transform: 'translateY(-3px)',
-              }}
-            >
-              Deskreen
-            </h4>
-          </Button>
-        </Tooltip>
-      </div>
-    );
-  }, [deskreenButtonTooltip, getClassesCallback]);
+
 
   return (
     <>
@@ -226,12 +130,9 @@ export default function TopPanel(props: any) {
           center="xs"
           style={{ width: '100%', transform: 'translateX(-50px)' }}
         >
-          <Col>{renderDonateButton()}</Col>
-          <Col>{renderLogoWithAppName()}</Col>
         </Row>
         <div className={getClassesCallback().topPanelControlButtonsRoot}>
           {renderConnectedDevicesListButton()}
-          {renderHelpButton()}
           {renderSettingsButton()}
         </div>
       </div>

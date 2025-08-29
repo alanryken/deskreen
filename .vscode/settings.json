@@ -9,8 +9,8 @@
   },
 
   "javascript.validate.enable": false,
-  "javascript.format.enable": false,
-  "typescript.format.enable": false,
+  "javascript.format.enable": true,
+  "typescript.format.enable": true,
 
   "search.exclude": {
     ".git": true,
@@ -28,6 +28,7 @@
     "*.{css,sass,scss}.d.ts": true
   },
   "editor.codeActionsOnSave": {
-    "source.fixAll.eslint": true
-  }
+    "source.fixAll.eslint": "explicit"
+  },
+  "editor.formatOnSave": true
 }
