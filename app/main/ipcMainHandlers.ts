@@ -17,25 +17,32 @@ const v4IPGetter = require('internal-ip').v4;
 
 export default function initIpcMainHandlers(mainWindow: BrowserWindow) {
   ipcMain.on('client-changed-language', async (_, newLangCode) => {
+    // 切换应用语言
     i18n.changeLanguage(newLangCode);
+    // 如果已有存储的语言且和新语言相同，就不做额外操作
     if (store.has(ElectronStoreKeys.AppLanguage)) {
       if (store.get(ElectronStoreKeys.AppLanguage) === newLangCode) {
         return;
       }
+      // 删除旧的语言设置
       store.delete(ElectronStoreKeys.AppLanguage);
     }
+    // 存储新的语言设置
     store.set(ElectronStoreKeys.AppLanguage, newLangCode);
   });
 
   ipcMain.handle('get-signaling-server-port', () => {
     if (mainWindow === null) return;
+    // 把信令服务器端口号发回给渲染进程
     mainWindow.webContents.send('sending-port-from-main', signalingServer.port);
   });
 
+  // 获取全部显示器
   ipcMain.handle('get-all-displays', () => {
     return screen.getAllDisplays();
   });
 
+  // 按显示器 ID 查找对应的屏幕尺寸
   ipcMain.handle('get-display-size-by-display-id', (_, displayID: string) => {
     const display = screen.getAllDisplays().find((d: Display) => {
       return `${d.id}` === displayID;
@@ -47,10 +54,14 @@ export default function initIpcMainHandlers(mainWindow: BrowserWindow) {
     return undefined;
   });
 
+  // 窗口关闭前的清理逻辑
   ipcMain.handle('main-window-onbeforeunload', () => {
     const deskreenGlobal = getDeskreenGlobal();
+    // 连接设备服务
     deskreenGlobal.connectedDevicesService = new ConnectedDevicesService();
+    // 房间id 服务
     deskreenGlobal.roomIDService = new RoomIDService();
+    // 断开所有共享会话
     deskreenGlobal.sharingSessionService.sharingSessions.forEach(
       (sharingSession: SharingSession) => {
         sharingSession.denyConnectionForPartner();
@@ -58,26 +69,32 @@ export default function initIpcMainHandlers(mainWindow: BrowserWindow) {
       }
     );
 
+    // 关闭所有辅助窗口
     deskreenGlobal.rendererWebrtcHelpersService.helpers.forEach(
       (helperWindow) => {
         helperWindow.close();
       }
     );
 
+    // 清理全局状态
     deskreenGlobal.sharingSessionService.waitingForConnectionSharingSession = null;
     deskreenGlobal.rendererWebrtcHelpersService.helpers.clear();
     deskreenGlobal.sharingSessionService.sharingSessions.clear();
   });
 
+  // 获取最新可用版本号
   ipcMain.handle('get-latest-version', () => {
     return getDeskreenGlobal().latestAppVersion;
   });
 
+  // 获取当前应用版本号
   ipcMain.handle('get-current-version', () => {
     return getDeskreenGlobal().currentAppVersion;
   });
 
+  // 获取本机局域网 IP
   ipcMain.handle('get-local-lan-ip', async () => {
+    // 在开发或生产模式下返回本机局域网 IP
     if (
       process.env.RUN_MODE === 'dev' ||
       process.env.NODE_ENV === 'production'
@@ -88,16 +105,19 @@ export default function initIpcMainHandlers(mainWindow: BrowserWindow) {
     return '255.255.255.255';
   });
 
+  // 返回应用安装路径
   ipcMain.handle(IpcEvents.GetAppPath, () => {
     const deskreenGlobal = getDeskreenGlobal();
     return deskreenGlobal.appPath;
   });
 
+  // 取消RoomId已占用的标记
   ipcMain.handle(IpcEvents.UnmarkRoomIDAsTaken, (_, roomID) => {
     const deskreenGlobal = getDeskreenGlobal();
     deskreenGlobal.roomIDService.unmarkRoomIDAsTaken(roomID);
   });
 
+  // 当设备连接时，设置为待确认设备并通知渲染进程
   function onDeviceConnectedCallback(device: Device): void {
     getDeskreenGlobal().connectedDevicesService.setPendingConnectionDevice(
       device
@@ -105,11 +125,13 @@ export default function initIpcMainHandlers(mainWindow: BrowserWindow) {
     mainWindow.webContents.send(IpcEvents.SetPendingConnectionDevice, device);
   }
 
+  // 创建一个“等待连接”的共享会话
   ipcMain.handle(IpcEvents.CreateWaitingForConnectionSharingSession, () => {
     getDeskreenGlobal()
       .sharingSessionService.createWaitingForConnectionSharingSession()
       // eslint-disable-next-line promise/always-return
       .then((waitingForConnectionSharingSession) => {
+        // 设置设备连接回调
         waitingForConnectionSharingSession.setOnDeviceConnectedCallback(
           onDeviceConnectedCallback
         );
@@ -117,6 +139,7 @@ export default function initIpcMainHandlers(mainWindow: BrowserWindow) {
       .catch((e) => log.error(e));
   });
 
+  // 重置等待连接的会话
   ipcMain.handle(IpcEvents.ResetWaitingForConnectionSharingSession, () => {
     const sharingSession = getDeskreenGlobal().sharingSessionService
       .waitingForConnectionSharingSession;
@@ -129,6 +152,7 @@ export default function initIpcMainHandlers(mainWindow: BrowserWindow) {
     getDeskreenGlobal().sharingSessionService.waitingForConnectionSharingSession = null;
   });
 
+  // 设置设备连接状态
   ipcMain.handle(IpcEvents.SetDeviceConnectedStatus, () => {
     if (
       getDeskreenGlobal().sharingSessionService
@@ -140,6 +164,7 @@ export default function initIpcMainHandlers(mainWindow: BrowserWindow) {
     }
   });
 
+  // 通过桌面捕获源ID获取源显示器ID
   ipcMain.handle(
     IpcEvents.GetSourceDisplayIDByDesktopCapturerSourceID,
     (_, sourceId) => {
@@ -149,6 +174,7 @@ export default function initIpcMainHandlers(mainWindow: BrowserWindow) {
     }
   );
 
+  // 通过会话ID断开对等端并销毁共享会话
   ipcMain.handle(
     IpcEvents.DisconnectPeerAndDestroySharingSessionBySessionID,
     (_, sessionId) => {
@@ -168,6 +194,7 @@ export default function initIpcMainHandlers(mainWindow: BrowserWindow) {
     }
   );
 
+  // 通过共享会话ID获取桌面捕获源ID
   ipcMain.handle(
     IpcEvents.GetDesktopCapturerSourceIdBySharingSessionId,
     (_, sessionId) => {
@@ -177,18 +204,22 @@ export default function initIpcMainHandlers(mainWindow: BrowserWindow) {
     }
   );
 
+  // 获取已连接设备列表
   ipcMain.handle(IpcEvents.GetConnectedDevices, () => {
     return getDeskreenGlobal().connectedDevicesService.getDevices();
   });
 
+  // 通过设备ID断开设备连接
   ipcMain.handle(IpcEvents.DisconnectDeviceById, (_, id) => {
     getDeskreenGlobal().connectedDevicesService.disconnectDeviceByID(id);
   });
 
+  // 断开所有设备连接
   ipcMain.handle(IpcEvents.DisconnectAllDevices, () => {
     getDeskreenGlobal().connectedDevicesService.disconnectAllDevices();
   });
 
+  // 应用程序语言已更改
   ipcMain.handle(IpcEvents.AppLanguageChanged, (_, newLang) => {
     if (store.has(ElectronStoreKeys.AppLanguage)) {
       store.delete(ElectronStoreKeys.AppLanguage);
@@ -201,6 +232,7 @@ export default function initIpcMainHandlers(mainWindow: BrowserWindow) {
     );
   });
 
+  // 获取桌面捕获服务源映射表
   ipcMain.handle(IpcEvents.GetDesktopCapturerServiceSourcesMap, () => {
     const map = getDeskreenGlobal().desktopCapturerSourcesService.getSourcesMap();
     const res = {};
@@ -220,6 +252,7 @@ export default function initIpcMainHandlers(mainWindow: BrowserWindow) {
     return res;
   });
 
+  // 获取等待连接共享会话的源ID
   ipcMain.handle(
     IpcEvents.GetWaitingForConnectionSharingSessionSourceId,
     () => {
@@ -228,6 +261,7 @@ export default function initIpcMainHandlers(mainWindow: BrowserWindow) {
     }
   );
 
+  // 在等待连接共享会话上启动共享
   ipcMain.handle(
     IpcEvents.StartSharingOnWaitingForConnectionSharingSession,
     () => {
@@ -244,10 +278,12 @@ export default function initIpcMainHandlers(mainWindow: BrowserWindow) {
     }
   );
 
+  // 获取待连接设备
   ipcMain.handle(IpcEvents.GetPendingConnectionDevice, () => {
     return getDeskreenGlobal().connectedDevicesService.pendingConnectionDevice;
   });
 
+  // 获取等待连接共享会话的房间ID
   ipcMain.handle(IpcEvents.GetWaitingForConnectionSharingSessionRoomId, () => {
     if (
       getDeskreenGlobal().sharingSessionService
@@ -259,6 +295,7 @@ export default function initIpcMainHandlers(mainWindow: BrowserWindow) {
       .waitingForConnectionSharingSession?.roomID;
   });
 
+  // 获取桌面共享源ID列表
   ipcMain.handle(
     IpcEvents.GetDesktopSharingSourceIds,
     (_, { isEntireScreenToShareChosen }) => {
@@ -273,12 +310,14 @@ export default function initIpcMainHandlers(mainWindow: BrowserWindow) {
     }
   );
 
+  // 设置桌面捕获源ID
   ipcMain.handle(IpcEvents.SetDesktopCapturerSourceId, (_, id) => {
     getDeskreenGlobal().sharingSessionService.waitingForConnectionSharingSession?.setDesktopCapturerSourceID(
       id
     );
   });
 
+  // 通知所有会话应用程序主题已更改
   ipcMain.handle(IpcEvents.NotifyAllSessionsWithAppThemeChanged, () => {
     getDeskreenGlobal().sharingSessionService.sharingSessions.forEach(
       (sharingSession) => {
@@ -287,6 +326,7 @@ export default function initIpcMainHandlers(mainWindow: BrowserWindow) {
     );
   });
 
+  // 是否首次启动
   ipcMain.handle(IpcEvents.GetIsFirstTimeAppStart, () => {
     if (store.has(ElectronStoreKeys.IsNotFirstTimeAppStart)) {
       return false;
@@ -294,6 +334,7 @@ export default function initIpcMainHandlers(mainWindow: BrowserWindow) {
     return true;
   });
 
+  // 设置应用程序已启动过一次
   ipcMain.handle(IpcEvents.SetAppStartedOnce, () => {
     if (store.has(ElectronStoreKeys.IsNotFirstTimeAppStart)) {
       store.delete(ElectronStoreKeys.IsNotFirstTimeAppStart);
@@ -301,6 +342,7 @@ export default function initIpcMainHandlers(mainWindow: BrowserWindow) {
     store.set(ElectronStoreKeys.IsNotFirstTimeAppStart, true);
   });
 
+  // 获取应用程序是否为深色主题
   ipcMain.handle(IpcEvents.GetIsAppDarkTheme, () => {
     if (store.has(ElectronStoreKeys.IsAppDarkTheme)) {
       return store.get(ElectronStoreKeys.IsAppDarkTheme);
@@ -308,6 +350,7 @@ export default function initIpcMainHandlers(mainWindow: BrowserWindow) {
     return false;
   });
 
+  // 设置应用程序是否为深色主题
   ipcMain.handle(IpcEvents.SetIsAppDarkTheme, (_, isDarkTheme) => {
     if (store.has(ElectronStoreKeys.IsAppDarkTheme)) {
       store.delete(ElectronStoreKeys.IsAppDarkTheme);
@@ -315,6 +358,7 @@ export default function initIpcMainHandlers(mainWindow: BrowserWindow) {
     store.set(ElectronStoreKeys.IsAppDarkTheme, isDarkTheme);
   });
 
+  // 获取应用程序语言
   ipcMain.handle(IpcEvents.GetAppLanguage, () => {
     if (store.has(ElectronStoreKeys.AppLanguage)) {
       return store.get(ElectronStoreKeys.AppLanguage);
@@ -322,6 +366,7 @@ export default function initIpcMainHandlers(mainWindow: BrowserWindow) {
     return 'en';
   });
 
+  // 通过ID销毁共享会话
   ipcMain.handle(IpcEvents.DestroySharingSessionById, (_, id) => {
     const sharingSession = getDeskreenGlobal().sharingSessionService.sharingSessions.get(
       id

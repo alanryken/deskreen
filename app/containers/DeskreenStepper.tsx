@@ -1,9 +1,7 @@
 /* eslint-disable @typescript-eslint/ban-ts-comment */
-//React 基础 hook。
+// React 基础 hook。
 import React, { useState, useCallback, useContext, useEffect } from 'react';
-//和桌面端 Electron 进程通信
-import { ipcRenderer, shell } from 'electron';
-//UI 样式和 Stepper 组件。
+import { ipcRenderer } from 'electron';
 import { makeStyles, createStyles } from '@material-ui/core/styles';
 import Stepper from '@material-ui/core/Stepper';
 import Step from '@material-ui/core/Step';
@@ -17,83 +15,86 @@ import {
   H4,
   H5,
   Icon,
-  Position,
   Spinner,
   Text,
-  Tooltip
-} from '@blueprintjs/core'; //Blueprint UI 库里的按钮、对话框、标题等。
-import { useTranslation } from 'react-i18next';//国际化翻译。
+} from '@blueprintjs/core';
+import { useTranslation } from 'react-i18next';
 import { TFunction } from 'i18next';
-import { useToasts } from 'react-toast-notifications';//消息提示框。
-// 项目中保存主题设置的 Context。
-import SuccessStep from '../components/StepsOfStepper/SuccessStep';
-import IntermediateStep from '../components/StepsOfStepper/IntermediateStep';
+import { useToasts } from 'react-toast-notifications'; // 消息提示框。
+//  项目中保存主题设置的 Context。
+import SuccessStep from '../components/StepsOfStepper/SuccessStep'; // 步骤 成功
+import IntermediateStep from '../components/StepsOfStepper/IntermediateStep'; // 中间 步骤
 import AllowConnectionForDeviceAlert from '../components/AllowConnectionForDeviceAlert';
 import DeviceConnectedInfoButton from '../components/StepperPanel/DeviceConnectedInfoButton';
 import ColorlibStepIcon, {
-  StepIconPropsDeskreen
+  StepIconPropsDeskreen,
 } from '../components/StepperPanel/ColorlibStepIcon';
 import ColorlibConnector from '../components/StepperPanel/ColorlibConnector';
 import { SettingsContext } from './SettingsProvider';
 import LanguageSelector from '../components/LanguageSelector';
 import { getShuffledArrayOfHello } from '../configs/i18next.config.client';
 import ToggleThemeBtnGroup from '../components/ToggleThemeBtnGroup';
-//事件备注
+// 事件备注
 import { IpcEvents } from '../main/IpcEvents.enum';
 
-const Fade = require('react-reveal/Fade');//动画效果
+const Fade = require('react-reveal/Fade'); // 动画效果
 
-//样式定义
+// 样式定义
 const useStyles = makeStyles(() =>
   createStyles({
     stepContent: {
       display: 'flex',
       flexDirection: 'column',
       justifyContent: 'center',
-      alignItems: 'center'
+      alignItems: 'center',
     },
     stepLabelContent: {
       marginTop: '10px !important',
-      height: '110px'
+      height: '110px',
     },
     stepperComponent: {
-      paddingBottom: '0px'
-    }
+      paddingBottom: '0px',
+    },
   })
 );
 
-//步骤
+//  步骤
 function getSteps(t: TFunction) {
   return [t('Connect'), t('Select'), t('Confirm')];
 }
 
-// eslint-disable-next-line react/display-name
-//定义一个 React 组件，允许父组件通过 ref 调用内部方法（比如重置步骤）。
+//  定义一个 React 组件，允许父组件通过 ref 调用内部方法（比如重置步骤）。
+//  eslint-disable-next-line react/display-name
 const DeskreenStepper = React.forwardRef((_props, ref) => {
-  // 多语言 Hook，t 是翻译函数
+  //  多语言 Hook，t 是翻译函数
   const { t } = useTranslation();
 
-  // 获取样式对象
+  //  获取样式对象
   const classes = useStyles();
 
-  // 从 SettingsContext 中取出 isDarkTheme（是否黑暗主题）
+  //  从 SettingsContext 中取出 isDarkTheme（是否黑暗主题）
   const { isDarkTheme } = useContext(SettingsContext);
 
-  // 全局 toast 提示函数
+  //  全局 toast 提示函数
   const { addToast } = useToasts();
 
-  // ------------------- State 状态定义 -------------------
-  const [isAlertOpen, setIsAlertOpen] = useState(false); // 是否打开设备连接确认对话框
-  const [isUserAllowedConnection, setIsUserAllowedConnection] = useState(false); // 用户是否允许连接
-  const [isNoWiFiError, setisNoWiFiError] = useState(false); // 是否检测到无 WiFi/LAN 错误
-  const [isSelectLanguageDialogOpen, setIsSelectLanguageDialogOpen] = useState(false); // 是否打开语言选择对话框
-  const [isDisplayHelloWord, setIsDisplayHelloWord] = useState(true); // 是否显示问候词（hello word 动画）
-  const [helloWord, setHelloWord] = useState('Hello'); // 当前显示的问候词
-  const [pendingConnectionDevice, setPendingConnectionDevice] = useState<Device | null>(null); // 待确认的连接设备
+  //  ------------------- State 状态定义 -------------------
+  const [isAlertOpen, setIsAlertOpen] = useState(false); //  是否打开设备连接确认对话框
+  const [isUserAllowedConnection, setIsUserAllowedConnection] = useState(false); //  用户是否允许连接
+  const [isNoWiFiError, setisNoWiFiError] = useState(false); //  是否检测到无 WiFi/LAN 错误
+  const [isSelectLanguageDialogOpen, setIsSelectLanguageDialogOpen] = useState(
+    false
+  ); //  是否打开语言选择对话框
+  const [isDisplayHelloWord, setIsDisplayHelloWord] = useState(true); //  是否显示问候词（hello word 动画）
+  const [helloWord, setHelloWord] = useState('Hello'); //  当前显示的问候词
+  const [
+    pendingConnectionDevice,
+    setPendingConnectionDevice,
+  ] = useState<Device | null>(null); //  待确认的连接设备
 
-  // ------------------- 副作用 useEffect -------------------
+  //  ------------------- 副作用 useEffect -------------------
   useEffect(() => {
-    // 每 1 秒检查一次本机是否有 IP
+    //  每 1 秒检查一次本机是否有 IP
     const ipInterval = setInterval(async () => {
       const gotIP = await ipcRenderer.invoke('get-local-lan-ip');
       if (gotIP === undefined) {
@@ -102,24 +103,24 @@ const DeskreenStepper = React.forwardRef((_props, ref) => {
         setisNoWiFiError(false);
       }
     }, 1000);
-    // 组件卸载时清理定时器
+    //  组件卸载时清理定时器
     return () => {
       clearInterval(ipInterval);
     };
   }, []);
 
   useEffect(() => {
-    // 初始化时创建一个等待连接的会话
+    //  初始化时创建一个等待连接的会话
     ipcRenderer.invoke(IpcEvents.CreateWaitingForConnectionSharingSession);
-    // 监听设备请求连接的事件
+    //  监听设备请求连接的事件
     ipcRenderer.on(IpcEvents.SetPendingConnectionDevice, (_, device) => {
       setPendingConnectionDevice(device);
-      setIsAlertOpen(true);// 弹出允许连接的确认框
+      setIsAlertOpen(true); //  弹出允许连接的确认框
     });
   }, []);
 
   useEffect(() => {
-    // 打开组件时，检查是否是首次启动
+    //  打开组件时，检查是否是首次启动
     let helloInterval: NodeJS.Timeout;
 
     async function stepperOpenedCallback() {
@@ -128,7 +129,7 @@ const DeskreenStepper = React.forwardRef((_props, ref) => {
       );
       setIsSelectLanguageDialogOpen(isFirstTimeStart);
       if (!isFirstTimeStart) return;
-      // 如果是首次启动，则轮流展示 Hello 单词动画
+      //  如果是首次启动，则轮流展示 Hello 单词动画
       const helloWords = getShuffledArrayOfHello();
       let pos = 0;
       helloInterval = setInterval(() => {
@@ -150,46 +151,49 @@ const DeskreenStepper = React.forwardRef((_props, ref) => {
     };
   }, []);
 
-  // ------------------- Stepper 相关状态 -------------------
-  const [activeStep, setActiveStep] = useState(0); // 当前步骤
-  const [isEntireScreenSelected, setIsEntireScreenSelected] = useState(false); // 是否选择了整个屏幕
-  const [isApplicationWindowSelected, setIsApplicationWindowSelected] = useState(false); // 是否选择了某个应用窗口
-  const steps = getSteps(t); // 步骤标题数组
+  //  ------------------- Stepper 相关状态 -------------------
+  const [activeStep, setActiveStep] = useState(0); //  当前步骤
+  const [isEntireScreenSelected, setIsEntireScreenSelected] = useState(false); //  是否选择了整个屏幕
+  const [
+    isApplicationWindowSelected,
+    setIsApplicationWindowSelected,
+  ] = useState(false); //  是否选择了某个应用窗口
+  const steps = getSteps(t); //  步骤标题数组
 
-  //UI 操作按钮 下一步
+  // UI 操作按钮 下一步
   const handleNext = useCallback(() => {
     if (activeStep === steps.length - 1) {
-      // 如果是最后一步，重置选择状态
+      //  如果是最后一步，重置选择状态
       setIsEntireScreenSelected(false);
       setIsApplicationWindowSelected(false);
     }
     setActiveStep((prevActiveStep) => prevActiveStep + 1);
   }, [activeStep, steps]);
-  // 下一步：选择整个屏幕
+  //  下一步：选择整个屏幕
   const handleNextEntireScreen = useCallback(() => {
     setActiveStep((prevActiveStep) => prevActiveStep + 1);
     setIsEntireScreenSelected(true);
   }, []);
 
-  // 下一步：选择应用窗口
+  //  下一步：选择应用窗口
   const handleNextApplicationWindow = useCallback(() => {
     setActiveStep((prevActiveStep) => prevActiveStep + 1);
     setIsApplicationWindowSelected(true);
   }, []);
 
-  //UI 操作按钮 上一步
+  // UI 操作按钮 上一步
   const handleBack = useCallback(() => {
     setActiveStep((prevActiveStep) => prevActiveStep - 1);
   }, []);
 
-  //UI 操作按钮 重置
+  // UI 操作按钮 重置
   const handleReset = useCallback(() => {
     setActiveStep(0);
 
     ipcRenderer.invoke(IpcEvents.CreateWaitingForConnectionSharingSession);
   }, []);
 
-// 重置步骤，并重新创建连接会话
+  //  重置步骤，并重新创建连接会话
   const handleResetWithSharingSessionRestart = useCallback(() => {
     setActiveStep(0);
     setPendingConnectionDevice(null);
@@ -199,13 +203,13 @@ const DeskreenStepper = React.forwardRef((_props, ref) => {
     ipcRenderer.invoke(IpcEvents.CreateWaitingForConnectionSharingSession);
   }, []);
 
-// 向外暴露方法，父组件可以调用 ref.handleReset()
+  //  向外暴露方法，父组件可以调用 ref.handleReset()
   React.useImperativeHandle(ref, () => ({
     handleReset() {
       handleResetWithSharingSessionRestart();
-    }
+    },
   }));
-// 取消连接请求时的处理
+  //  取消连接请求时的处理
   const handleCancelAlert = async () => {
     setIsAlertOpen(false);
     setActiveStep(0);
@@ -215,7 +219,7 @@ const DeskreenStepper = React.forwardRef((_props, ref) => {
     ipcRenderer.invoke(IpcEvents.ResetWaitingForConnectionSharingSession);
     ipcRenderer.invoke(IpcEvents.CreateWaitingForConnectionSharingSession);
   };
-  // 确认连接请求时的处理
+  //  确认连接请求时的处理
   const handleConfirmAlert = useCallback(async () => {
     setIsAlertOpen(false);
     setIsUserAllowedConnection(true);
@@ -223,8 +227,7 @@ const DeskreenStepper = React.forwardRef((_props, ref) => {
 
     ipcRenderer.invoke(IpcEvents.SetDeviceConnectedStatus);
   }, [handleNext]);
-  
-  // 用户手动断开设备时的处理
+  //  用户手动断开设备时的处理
   const handleUserClickedDeviceDisconnectButton = useCallback(async () => {
     handleResetWithSharingSessionRestart();
 
@@ -238,17 +241,16 @@ const DeskreenStepper = React.forwardRef((_props, ref) => {
         appearance: 'info',
         autoDismiss: true,
         // @ts-ignore: works fine here
-        isdarktheme: `${isDarkTheme}`
+        isdarktheme: `${isDarkTheme}`,
       }
     );
   }, [addToast, handleResetWithSharingSessionRestart, isDarkTheme, t]);
-
-  // 渲染 Step 内容（中间步骤或成功页面）
+  //  渲染 Step 内容（中间步骤或成功页面）
   const renderIntermediateOrSuccessStepContent = useCallback(() => {
     return activeStep === steps.length ? (
       <div style={{ width: '100%' }}>
         <Row middle="xs" center="xs">
-          <SuccessStep handleReset={handleReset}/>
+          <SuccessStep handleReset={handleReset} />
         </Row>
       </div>
     ) : (
@@ -274,10 +276,10 @@ const DeskreenStepper = React.forwardRef((_props, ref) => {
     handleBack,
     handleNextEntireScreen,
     handleNextApplicationWindow,
-    pendingConnectionDevice
+    pendingConnectionDevice,
   ]);
 
-  // 渲染 Step 标签（顶部步骤条的 label）
+  //  渲染 Step 标签（顶部步骤条的 label）
   const renderStepLabelContent = useCallback(
     (label, idx) => {
       return (
@@ -288,7 +290,7 @@ const DeskreenStepper = React.forwardRef((_props, ref) => {
           StepIconProps={
             {
               isEntireScreenSelected,
-              isApplicationWindowSelected
+              isApplicationWindowSelected,
             } as StepIconPropsDeskreen
           }
         >
@@ -309,10 +311,10 @@ const DeskreenStepper = React.forwardRef((_props, ref) => {
       isApplicationWindowSelected,
       isEntireScreenSelected,
       isUserAllowedConnection,
-      pendingConnectionDevice
+      pendingConnectionDevice,
     ]
   );
- // ------------------- 组件渲染 -------------------
+  //  ------------------- 组件渲染 -------------------
   return (
     <>
       {/* 步骤条 UI */}
@@ -323,7 +325,7 @@ const DeskreenStepper = React.forwardRef((_props, ref) => {
             activeStep={activeStep}
             alternativeLabel
             style={{ background: 'transparent' }}
-            connector={<ColorlibConnector/>}
+            connector={<ColorlibConnector />}
           >
             {steps.map((label, idx) => (
               <Step key={label}>{renderStepLabelContent(label, idx)}</Step>
@@ -331,6 +333,7 @@ const DeskreenStepper = React.forwardRef((_props, ref) => {
           </Stepper>
         </Col>
         <Col className={classes.stepContent} xs={12}>
+          {/* {设置步骤} */}
           {renderIntermediateOrSuccessStepContent()}
         </Col>
       </Row>
@@ -346,7 +349,7 @@ const DeskreenStepper = React.forwardRef((_props, ref) => {
         <Grid>
           <div style={{ padding: '10px' }}>
             <Row center="xs" style={{ marginTop: '10px' }}>
-              <Icon icon="offline" iconSize={50} color="#8A9BA8"/>
+              <Icon icon="offline" iconSize={50} color="#8A9BA8" />
             </Row>
             <Row center="xs" style={{ marginTop: '10px' }}>
               <H3>No WiFi and LAN connection.</H3>
@@ -355,7 +358,7 @@ const DeskreenStepper = React.forwardRef((_props, ref) => {
               <H5>Deskreen works only with WiFi and LAN networks.</H5>
             </Row>
             <Row center="xs">
-              <Spinner size={50}/>
+              <Spinner size={50} />
             </Row>
             <Row center="xs" style={{ marginTop: '10px' }}>
               <H4>Waiting for connection.</H4>
@@ -375,24 +378,24 @@ const DeskreenStepper = React.forwardRef((_props, ref) => {
             <Row>
               <Col xs>
                 <Row center="xs" style={{ marginTop: '20px' }}>
-                  <Icon icon="translate" iconSize={50} color="#8A9BA8"/>
+                  <Icon icon="translate" iconSize={50} color="#8A9BA8" />
                 </Row>
                 <Row center="xs" style={{ marginTop: '20px' }}>
                   <H5>{t('Language')}</H5>
                 </Row>
                 <Row center="xs" style={{ marginTop: '10px' }}>
-                  <LanguageSelector/>
+                  <LanguageSelector />
                 </Row>
               </Col>
               <Col xs>
                 <Row center="xs" style={{ marginTop: '20px' }}>
-                  <Icon icon="style" iconSize={50} color="#8A9BA8"/>
+                  <Icon icon="style" iconSize={50} color="#8A9BA8" />
                 </Row>
                 <Row center="xs" style={{ marginTop: '20px' }}>
                   <H5>{t('Color Theme')}</H5>
                 </Row>
                 <Row center="xs" style={{ marginTop: '10px' }}>
-                  <ToggleThemeBtnGroup/>
+                  <ToggleThemeBtnGroup />
                 </Row>
               </Col>
             </Row>

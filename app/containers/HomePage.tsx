@@ -6,11 +6,11 @@ import React, { useRef } from 'react';
 import { Classes } from '@blueprintjs/core';
 import { ToastProvider, DefaultToast } from 'react-toast-notifications';
 
-//顶部按钮
+// 顶部按钮
 import TopPanel from '../components/TopPanel';
 //
 import { LIGHT_UI_BACKGROUND } from './SettingsProvider';
-//设置步骤
+// 设置步骤
 import DeskreenStepper from './DeskreenStepper';
 
 // @ts-ignore: it is ok here, be like js it is fine

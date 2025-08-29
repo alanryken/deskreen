@@ -2,16 +2,16 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 /* eslint-disable react-hooks/rules-of-hooks */
 import React, { useCallback, useContext } from 'react';
-import { Button, Text, Icon, Position, Tooltip } from '@blueprintjs/core';
+import { Button, Icon, Position, Tooltip } from '@blueprintjs/core';
 import { createStyles, makeStyles } from '@material-ui/core/styles';
-import { Col, Row } from 'react-flexbox-grid';
+import { Row } from 'react-flexbox-grid';
 import { useTranslation } from 'react-i18next';
 import SettingsOverlay from './SettingsOverlay/SettingsOverlay';
 import ConnectedDevicesListDrawer from './ConnectedDevicesListDrawer';
 import { SettingsContext } from '../containers/SettingsProvider';
 // eslint-disable-next-line @typescript-eslint/ban-ts-comment
 // @ts-ignore fine import here
-import RedHeartTwemojiPNG from '../images/red_heart_2764_twemoji_120x120.png';
+// import RedHeartTwemojiPNG from '../images/red_heart_2764_twemoji_120x120.png';
 
 const useStylesWithTheme = (isDarkTheme: boolean) =>
   makeStyles(() =>
@@ -76,8 +76,6 @@ export default function TopPanel(props: any) {
   const handleToggleConnectedDevicesListDrawer = useCallback(() => {
     setIsConnectedDevicesDrawerOpen(!isConnectedDevicesDrawerOpen);
   }, [isConnectedDevicesDrawerOpen]);
-
-
   // 连接设备按钮
   const renderConnectedDevicesListButton = useCallback(() => {
     return (
@@ -120,8 +118,6 @@ export default function TopPanel(props: any) {
     );
   }, [getClassesCallback, handleSettingsOpen, t]);
 
-
-
   return (
     <>
       <div className={getClassesCallback().topPanelRoot}>
@@ -129,8 +125,7 @@ export default function TopPanel(props: any) {
           middle="xs"
           center="xs"
           style={{ width: '100%', transform: 'translateX(-50px)' }}
-        >
-        </Row>
+        />
         <div className={getClassesCallback().topPanelControlButtonsRoot}>
           {renderConnectedDevicesListButton()}
           {renderSettingsButton()}
