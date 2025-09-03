@@ -22,7 +22,7 @@ import { useTranslation } from 'react-i18next';
 import { TFunction } from 'i18next';
 import { useToasts } from 'react-toast-notifications'; // 消息提示框。
 //  项目中保存主题设置的 Context。
-import SuccessStep from '../components/StepsOfStepper/SuccessStep'; // 步骤 成功
+// import SuccessStep from '../components/StepsOfStepper/SuccessStep'; // 步骤 成功
 import IntermediateStep from '../components/StepsOfStepper/IntermediateStep'; // 中间 步骤
 import AllowConnectionForDeviceAlert from '../components/AllowConnectionForDeviceAlert';
 import DeviceConnectedInfoButton from '../components/StepperPanel/DeviceConnectedInfoButton';
@@ -60,7 +60,7 @@ const useStyles = makeStyles(() =>
 
 //  步骤
 function getSteps(t: TFunction) {
-  return [t('Connect'), t('Select'), t('Confirm')];
+  return [ t('Select'),t('Connect'),]; // 移除 Confirm
 }
 
 //  定义一个 React 组件，允许父组件通过 ref 调用内部方法（比如重置步骤）。
@@ -115,7 +115,11 @@ const DeskreenStepper = React.forwardRef((_props, ref) => {
     //  监听设备请求连接的事件
     ipcRenderer.on(IpcEvents.SetPendingConnectionDevice, (_, device) => {
       setPendingConnectionDevice(device);
-      setIsAlertOpen(true); //  弹出允许连接的确认框
+      // setIsAlertOpen(true); //  弹出允许连接的确认框
+       setIsUserAllowedConnection(true); // 直接允许连接
+      // 自动进入下一步
+      setActiveStep((prevActiveStep) => prevActiveStep + 1);
+      ipcRenderer.invoke(IpcEvents.SetDeviceConnectedStatus);
     });
   }, []);
 
@@ -171,13 +175,13 @@ const DeskreenStepper = React.forwardRef((_props, ref) => {
   }, [activeStep, steps]);
   //  下一步：选择整个屏幕
   const handleNextEntireScreen = useCallback(() => {
-    setActiveStep((prevActiveStep) => prevActiveStep + 1);
+    setActiveStep(1); // 直接进入 Connect 步骤
     setIsEntireScreenSelected(true);
   }, []);
 
   //  下一步：选择应用窗口
   const handleNextApplicationWindow = useCallback(() => {
-    setActiveStep((prevActiveStep) => prevActiveStep + 1);
+    setActiveStep(1);// 直接进入 Connect 步骤
     setIsApplicationWindowSelected(true);
   }, []);
 
@@ -223,10 +227,8 @@ const DeskreenStepper = React.forwardRef((_props, ref) => {
   const handleConfirmAlert = useCallback(async () => {
     setIsAlertOpen(false);
     setIsUserAllowedConnection(true);
-    handleNext();
-
     ipcRenderer.invoke(IpcEvents.SetDeviceConnectedStatus);
-  }, [handleNext]);
+  }, []);
   //  用户手动断开设备时的处理
   const handleUserClickedDeviceDisconnectButton = useCallback(async () => {
     handleResetWithSharingSessionRestart();
@@ -246,29 +248,22 @@ const DeskreenStepper = React.forwardRef((_props, ref) => {
     );
   }, [addToast, handleResetWithSharingSessionRestart, isDarkTheme, t]);
   //  渲染 Step 内容（中间步骤或成功页面）
-  const renderIntermediateOrSuccessStepContent = useCallback(() => {
-    return activeStep === steps.length ? (
-      <div style={{ width: '100%' }}>
-        <Row middle="xs" center="xs">
-          <SuccessStep handleReset={handleReset} />
-        </Row>
-      </div>
-    ) : (
-      <div id="intermediate-step-container" style={{ width: '100%' }}>
-        <IntermediateStep
-          activeStep={activeStep}
-          steps={steps}
-          handleNext={handleNext}
-          handleBack={handleBack}
-          handleNextEntireScreen={handleNextEntireScreen}
-          handleNextApplicationWindow={handleNextApplicationWindow}
-          resetPendingConnectionDevice={() => setPendingConnectionDevice(null)}
-          resetUserAllowedConnection={() => setIsUserAllowedConnection(false)}
-          connectedDevice={pendingConnectionDevice}
-        />
-      </div>
-    );
-  }, [
+  const renderIntermediateOrSuccessStepContent = useCallback(() => (
+    <div id="intermediate-step-container" style={{ width: '100%' }}>
+      <IntermediateStep
+        activeStep={activeStep}
+        steps={steps}
+        handleNext={handleNext}
+        handleBack={handleBack}
+        handleNextEntireScreen={handleNextEntireScreen}
+        handleNextApplicationWindow={handleNextApplicationWindow}
+        resetPendingConnectionDevice={() => setPendingConnectionDevice(null)}
+        resetUserAllowedConnection={() => setIsUserAllowedConnection(false)}
+        connectedDevice={pendingConnectionDevice}
+        handleReset={handleReset} // 新增
+      />
+    </div>
+  ), [
     activeStep,
     steps,
     handleReset,

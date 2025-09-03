@@ -117,18 +117,16 @@ export default function initIpcMainHandlers(mainWindow: BrowserWindow) {
     deskreenGlobal.roomIDService.unmarkRoomIDAsTaken(roomID);
   });
 
-  // 当设备连接时，设置为待确认设备并通知渲染进程
+  // 当设备连接时，设备连接自动允许
   function onDeviceConnectedCallback(device: Device): void {
-    getDeskreenGlobal().connectedDevicesService.setPendingConnectionDevice(
-      device
-    );
-    mainWindow.webContents.send(IpcEvents.SetPendingConnectionDevice, device);
+    getDeskreenGlobal().connectedDevicesService.addDevice(device); // 直接添加，无需确认
+    mainWindow.webContents.send(IpcEvents.SetPendingConnectionDevice, device); // 可选：用于前端刷新设备列表
   }
 
   // 创建一个“等待连接”的共享会话
   ipcMain.handle(IpcEvents.CreateWaitingForConnectionSharingSession, () => {
     getDeskreenGlobal()
-      .sharingSessionService.createWaitingForConnectionSharingSession()
+      .sharingSessionService.createWaitingForConnectionSharingSession('123456')
       // eslint-disable-next-line promise/always-return
       .then((waitingForConnectionSharingSession) => {
         // 设置设备连接回调

@@ -1,5 +1,6 @@
-import shortID from 'shortid';
-import crypto from 'crypto';
+// import shortID from 'shortid';
+// import crypto from 'crypto';
+// import { resolve } from 'dns';
 
 export default class RoomIDService {
   takenRoomIDs: Set<string>;
@@ -13,22 +14,24 @@ export default class RoomIDService {
   }
 
   getSimpleAvailableRoomID(): Promise<string> {
-    this.nextSimpleRoomID += 1;
-    return new Promise<string>((resolve) => {
-      crypto.randomBytes(3, (_, buffer) => {
-        resolve(parseInt(buffer.toString('hex'), 16).toString().substr(0, 6));
-      });
-    });
+    // this.nextSimpleRoomID += 1;
+    // return new Promise<string>((resolve) => {
+    //   crypto.randomBytes(3, (_, buffer) => {
+    //     resolve(parseInt(buffer.toString('hex'), 16).toString().substr(0, 6));
+    //   });
+    // });
+     return Promise.resolve('123456');;
   }
 
   getShortIDStringOfAvailableRoom(): Promise<string> {
-    return new Promise<string>((resolve) => {
-      let newID = shortID();
-      while (this.takenRoomIDs.has(newID)) {
-        newID = shortID();
-      }
-      resolve(newID);
-    });
+    // return new Promise<string>((resolve) => {
+    //   let newID = shortID();
+    //   while (this.takenRoomIDs.has(newID)) {
+    //     newID = shortID();
+    //   }
+    //   resolve(newID);
+    // });
+    return Promise.resolve('123456');
   }
 
   markRoomIDAsTaken(id: string) {

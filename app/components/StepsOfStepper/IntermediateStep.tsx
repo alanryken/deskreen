@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect, useCallback } from 'react';
 import { ipcRenderer } from 'electron'; // 用于与 Electron 主进程通信
 import { Button, Text } from '@blueprintjs/core'; // UI 按钮和文字组件
 import { useTranslation } from 'react-i18next'; //  多语言翻译 hook
@@ -6,7 +6,6 @@ import { TFunction } from 'i18next'; //  翻译函数类型定义
 import { Col, Row } from 'react-flexbox-grid'; // Flexbox 布局
 import ScanQRStep from './ScanQRStep'; // 扫描二维码步骤 UI
 import ChooseAppOrScreeenStep from './ChooseAppOrScreeenStep'; // 选择屏幕或应用窗口步骤 UI
-import ConfirmStep from './ConfirmStep'; // 确认连接设备步骤 UI
 import { IpcEvents } from '../../main/IpcEvents.enum'; // 主进程事件定义
 
 // 定义组件的 props 类型（输入参数
@@ -20,6 +19,7 @@ interface IntermediateStepProps {
   resetPendingConnectionDevice: () => void; // 重置待连接设备
   resetUserAllowedConnection: () => void; // 重置用户允许的连接状态
   connectedDevice: Device | null; // 当前连接的设备信息（可能为 null）
+  handleReset: () => void; // 补充 handleReset 属性
 }
 
 // 根据步骤索引返回对应 UI
@@ -28,12 +28,12 @@ function getStepContent(
   stepIndex: number,
   handleNextEntireScreen: () => void,
   handleNextApplicationWindow: () => void,
-  connectedDevice: Device | null
+  handleReset: () => void, // 新增参数
+  handleTextConnectedListMouseEnter: () => void,
+  handleTextConnectedListMouseLeave: () => void
 ) {
   switch (stepIndex) {
-    case 0: // 第 0 步：展示二维码扫描界面
-      return <ScanQRStep />;
-    case 1: // 选择共享模式（全屏 or 应用窗口）
+    case 0: // 第 0 步：选择共享模式
       return (
         <>
           <Row center="xs">
@@ -49,31 +49,81 @@ function getStepContent(
           />
         </>
       );
-    case 2:
-      return <ConfirmStep device={connectedDevice} />; // 第 2 步：确认设备界面
+    case 1: // Connect 步骤
+      return (
+        <>
+          <ScanQRStep  />
+          <Row center="xs" style={{ marginTop: '10px', marginBottom: '10px' }}>
+            <Col xs={12}>
+              <div
+                id="connected-devices-list-text-success"
+                onMouseEnter={handleTextConnectedListMouseEnter}
+                onMouseLeave={handleTextConnectedListMouseLeave}
+                style={{
+                  textDecoration: 'underline dotted',
+                }}
+              >
+                <Text className="">
+                  {t(
+                    'You can manage connected devices by clicking Connected Devices button in top panel'
+                  )}
+                </Text>
+              </div>
+            </Col>
+          </Row>
+          <Button
+            intent="primary"
+            onClick={handleReset}
+            icon="repeat"
+            style={{ borderRadius: '100px' }}
+          >
+            {t('Connect New Device')}
+          </Button>
+        </>
+      );
     default:
-      return 'Unknown stepIndex'; // 兜底情况
+      // console.info('---- Unknown stepIndex in IntermediateStep:', stepIndex);
+      // return 'Unknown stepIndex';
+      return <text>{stepIndex}</text>;
   }
 }
-// 判断当前步骤是否为“确认步骤”
-function isConfirmStep(activeStep: number, steps: string[]) {
-  return activeStep === steps.length - 1;
-}
+
 // IntermediateStep 主组件
 export default function IntermediateStep(props: IntermediateStepProps) {
   const { t } = useTranslation(); // 获取翻译函数 t
   // 从 props 解构出各个属性
   const {
     activeStep,
-    steps,
-    handleNext,
-    handleBack,
     handleNextEntireScreen,
     handleNextApplicationWindow,
     resetPendingConnectionDevice,
     resetUserAllowedConnection,
-    connectedDevice,
+    handleReset,
   } = props;
+
+  // 鼠标进入和离开事件处理
+  const handleTextConnectedListMouseEnter = useCallback(() => {
+    document
+      .querySelector('#top-panel-connected-devices-list-button')
+      ?.classList.add('pulsing');
+  }, []);
+
+  const handleTextConnectedListMouseLeave = useCallback(() => {
+    document
+      .querySelector('#top-panel-connected-devices-list-button')
+      ?.classList.remove('pulsing');
+  }, []);
+
+  // 自动执行确认逻辑
+  useEffect(() => {
+    if (activeStep === 1) {
+      ipcRenderer.invoke(
+        IpcEvents.StartSharingOnWaitingForConnectionSharingSession
+      );
+      resetPendingConnectionDevice();
+      resetUserAllowedConnection();
+    }
+  }, [activeStep, resetPendingConnectionDevice, resetUserAllowedConnection]);
 
   return (
     <Col
@@ -93,82 +143,11 @@ export default function IntermediateStep(props: IntermediateStepProps) {
         activeStep,
         handleNextEntireScreen,
         handleNextApplicationWindow,
-        connectedDevice
+        handleReset,
+        handleTextConnectedListMouseEnter,
+        handleTextConnectedListMouseLeave
       )}
-      {
-        // 仅在开发/测试模式下显示一个“连接测试设备”按钮
-        // eslint-disable-next-line no-nested-ternary
-        process.env.NODE_ENV === 'production' &&
-        process.env.RUN_MODE !== 'dev' &&
-        process.env.RUN_MODE !== 'test' ? (
-          <></>
-        ) : activeStep === 0 ? (
-          // eslint-disable-next-line react/jsx-indent
-          <Button
-            onClick={() => {
-              // 模拟添加一个测试设备（注释掉了）
-              // connectedDevicesService.setPendingConnectionDevice(DEVICES[Math.floor(Math.random() * DEVICES.length)]);
-            }}
-          >
-            Connect Test Device
-          </Button>
-        ) : (
-          <></>
-        )
-      }
-      {/* 只有在第 0 步之后才显示 “下一步/确认” 按钮 */}
-      {activeStep !== 0 ? (
-        <Row>
-          <Col xs={12}>
-            <Button
-              intent={activeStep === 2 ? 'success' : 'none'} // 第 2 步按钮为绿色
-              onClick={async () => {
-                handleNext(); // 进入下一步
-                if (isConfirmStep(activeStep, steps)) {
-                  // 如果是确认步骤，通知主进程开始屏幕共享
-                  ipcRenderer.invoke(
-                    IpcEvents.StartSharingOnWaitingForConnectionSharingSession
-                  );
-                  // 清空待连接设备 & 用户连接状态
-                  resetPendingConnectionDevice();
-                  resetUserAllowedConnection();
-                }
-              }}
-              style={{
-                display: activeStep === 1 ? 'none' : 'inline', // 在第 1 步隐藏该按钮
-                borderRadius: '100px',
-                width: '300px',
-                textAlign: 'center',
-              }}
-              rightIcon={
-                isConfirmStep(activeStep, steps)
-                  ? 'small-tick' // 确认按钮用 ✅
-                  : 'chevron-right' // 普通下一步按钮用 →
-              }
-            >
-              {isConfirmStep(activeStep, steps)
-                ? t('Confirm Button Text') // 确认按钮文本
-                : 'Next'}
-              {/* 普通情况显示 Next */}
-            </Button>
-          </Col>
-        </Row>
-      ) : (
-        <></>
-      )}
-      {/* 如果处于确认步骤（第 2 步），显示“返回上一步”按钮 */}
-      <Row style={{ display: activeStep === 2 ? 'inline-block' : 'none' }}>
-        <Button
-          intent="danger" // 红色按钮
-          style={{
-            marginTop: '10px',
-            borderRadius: '100px',
-          }}
-          onClick={handleBack} // 返回上一步
-          icon="chevron-left"
-          text={t('No, I need to choose other')} // “不，我要选择其他”
-        />
-      </Row>
+      {/* 所有按钮都隐藏 */}
     </Col>
   );
 }

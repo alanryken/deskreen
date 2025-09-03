@@ -85,24 +85,6 @@ const ScanQRStep: React.FC = () => {
 
   return (
     <>
-      <div style={{ textAlign: 'center' }}>
-        <Text>
-          <span
-            style={{
-              backgroundColor: '#00f99273',
-              fontWeight: 900,
-              paddingRight: '8px',
-              paddingLeft: '8px',
-              borderRadius: '20px',
-            }}
-          >
-            {t(
-              'Make sure your computer and screen viewing device are connected to same Wi-Fi'
-            )}
-          </span>
-        </Text>
-        <Text className="bp3-text">{t('Scan the QR code')}</Text>
-      </div>
       <div>
         <Tooltip content={t('Click to make bigger')} position={Position.LEFT}>
           <Button
@@ -119,8 +101,8 @@ const ScanQRStep: React.FC = () => {
               imageSettings={{
                 // TODO: change image to app icon
                 src: `http://127.0.0.1:${CLIENT_VIEWER_PORT}/logo192.png`,
-                width: 40,
-                height: 40,
+                width: 30,
+                height: 30,
               }}
             />
           </Button>
@@ -128,9 +110,12 @@ const ScanQRStep: React.FC = () => {
       </div>
       <div style={{ marginBottom: '10px' }}>
         <Text className="bp3-text-muted">
-          {`${t(
+          {t(
+              'Make sure your computer and screen viewing device are connected to same Wi-Fi'
+            )}
+          {` ${t(
             'Or type the following address in browser address bar on any device'
-          )}:`}
+          )}:`}          
         </Text>
       </div>
 
